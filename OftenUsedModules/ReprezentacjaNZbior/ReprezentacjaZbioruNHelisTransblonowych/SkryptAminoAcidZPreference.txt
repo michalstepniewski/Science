@@ -1,0 +1,37 @@
+layout( matrix(1:9, 3, 3, byrow = T))
+
+helisy <- read.csv("AminoAcidZPreference_A.csv")
+hist(helisy$A, xlim = c(-20,20), freq = F, main = "A", xlab = "Z (A)")
+lines(density(helisy$A), col = "red")
+
+helisy <- read.csv("AminoAcidZPreference_C.csv")
+hist(helisy$C, xlim = c(-20,20), freq = F, main = "C", xlab = "Z (A)")
+lines(density(helisy$C), col = "red")
+
+helisy <- read.csv("AminoAcidZPreference_D.csv")
+hist(helisy$D, xlim = c(-20,20), freq = F, main = "D", xlab = "Z (A)")
+lines(density(helisy$D), col = "red")
+
+helisy <- read.csv("AminoAcidZPreference_E.csv")
+hist(helisy$E, xlim = c(-20,20), freq = F, main = "E", xlab = "Z (A)")
+lines(density(helisy$E), col = "red")
+
+helisy <- read.csv("AminoAcidZPreference_F.csv")
+hist(helisy$F, xlim = c(-20,20), freq = F, main = "F", xlab = "Z (A)")
+lines(density(helisy$F), col = "red")
+
+helisy <- read.csv("AminoAcidZPreference_G.csv")
+hist(helisy$G, xlim = c(-20,20), freq = F, main = "G", xlab = "Z (A)")
+lines(density(helisy$G), col = "red")
+
+helisy <- read.csv("AminoAcidZPreference_H.csv")
+hist(helisy$H, xlim = c(-20,20), freq = F, main = "H", xlab = "Z (A)")
+lines(density(helisy$H), col = "red")
+
+helisy <- read.csv("AminoAcidZPreference_I.csv")
+hist(helisy$I, xlim = c(-20,20), freq = F, main = "I", xlab = "Z (A)")
+lines(density(helisy$I), col = "red")
+
+helisy <- read.csv("AminoAcidZPreference_K.csv")
+hist(helisy$K, xlim = c(-20,20), freq = F, main = "K", xlab = "Z (A)")
+lines(density(helisy$K), col = "red")

@@ -1,0 +1,723 @@
+######################################################
+# powinienem wyjsc na przerwe, przejsc sie i wymyslec sposob na czytanie gotowego datasetu, tak jak czytam dataset protein
+
+import ProteinChainModule; from ProteinChainModule import ProteinChain;
+
+
+import  AtomRecordModule;
+from  AtomRecordModule import *;
+
+import SetOfAtomsModule; from SetOfAtomsModule import *;
+import Parametry
+
+
+#print Parametry.MainAxisDefinition
+
+import  GeometricalClassesModule;
+from GeometricalClassesModule import *;
+
+
+# trzeba to przeczyscic #
+#####################################################################################################################################################
+#####################################################################################################################################################
+#####################################################################################################################################################
+
+# have clear info about inheritance
+
+# potrzebuje zeby ten modul znal parametry
+
+class TMHelix ( ProteinChain ): 
+# wiec jest to z atomow? a moze raczej z Aminokwasow ..., trzeba przesledzic ekstrakcje
+# wiec z dwoch argumentow bedziemy robic helise, z atomow i z ID
+
+#####################################################################################################################################################
+
+      def __init__ ( self, InputResidueInstances, ID = 0, ParametersInstance = [ ] ): # u have to initiate a helix with an ID, otherwise it is lost
+# musze to przemyslec, ale tak na powaznie, musialbym przerobic ta klase wtedy
+          self.Content = [ ]
+
+#          self.ParametryI = ReadParameterFile ( './DaneWejsciowe/PlikiZParametrami/PlikZParametrami.txt' )
+
+          for InputResidueInstance in InputResidueInstances:
+
+              self.Content. append ( InputResidueInstance )
+
+          self.ID = ID
+          self. ChainID = 'X'
+          self. CalculateNterDescriptor ()
+
+#####################################################################################################################################################
+
+      def CA_XYZs ( self ):
+
+          self.XYZsI = [ Point ( [ self.CA.X , self.CA.Y,  self.CA.Z ]) for self.CA in self.CAs() ]
+
+          return SetOfPoints ( self.XYZsI ) # musze popracowac nad tym
+
+                                        # TransMembrane Helix
+
+#####################################################################################################################################################
+
+      def HalfHelixTiltConsistent (self, TiltDiscrepancyThreshold = 30.0 ):
+          
+          HalfHelixTiltsPCAI = self. HalfHelixTiltsPCA  ()
+          
+          HalfHelixTiltsCOMI = self. HalfHelixTiltsCOM_Vector ()
+          
+          for N in range(2):
+              
+              if abs( HalfHelixTiltsPCAI[N] - HalfHelixTiltsCOMI[N] )>= 30.0:
+                  
+                  return False
+          
+          return True
+
+#####################################################################################################################################################
+
+# no tak, zaimplementowalem przeciez parametry #
+
+      def MainAxis ( self ):
+
+#          print Parametry. MainAxisDefinition
+#          quit ( )
+
+          if Parametry. MainAxisDefinition == 'PCA':
+
+             return self. AxisPCA ( )
+
+          elif Parametry. MainAxisDefinition == 'COM':
+
+#             print self. AxisCOM_Vector ( )
+
+             return self. AxisCOM_Vector ( )
+
+#####################################################################################################################################################
+
+      def AxisPCA ( self ): # musi byc w parametrach
+          #moge sie zawsze podlaczyc pod helanala ale zobaczymy
+ 
+          # FittedMainAxis niech zwraca Vector3D
+          if Parametry. HelixDirectionality == 'NterCter':
+             return self. CA_XYZs ( ). PCAAxis ( )
+
+          elif Parametry. HelixDirectionality == 'IC_EC':
+               Axis = self. CA_XYZs ( ). PCAAxis ( )
+
+               if Axis[2]>= 0.0:
+                  return Axis
+
+               OppositeAxis = Vector ( [ -Coord for Coord in Axis ] )
+
+               return OppositeAxis
+
+#####################################################################################################################################################
+# returns distance to PCA Axis
+      def DistanceToPCAAxis( self ): # musi byc w parametrach
+          #moge sie zawsze podlaczyc pod helanala ale zobaczymy
+ 
+          # FittedMainAxis niech zwraca Vector3D
+          if Parametry. HelixDirectionality == 'NterCter':
+             return self.CA_XYZs ( ).DistanceToPCAAxis ( )
+
+          elif Parametry. HelixDirectionality == 'IC_EC':
+               DistanceToAxis = self.CA_XYZs ( ).DistanceToPCAAxis ( )
+
+#               if Axis[2]>= 0.0:
+#                  return Axis
+
+#               OppositeAxis = Vector ( [ -Coord for Coord in Axis ] )
+
+               return DistanceToAxis
+
+#####################################################################################################################################################
+
+      def AxisCOM_Vector ( self ):
+
+         """
+         returns Helix Axis as a Vector pointing from Nter to Cter
+         """
+
+         COMs = self. ThinSlicesCOMs ( )
+
+         if Parametry. HelixDirectionality == 'NterCter':
+
+          if self. NterDescriptor =='EC':
+
+             return SetOfPoints ( [ COMs [ 0 ], COMs [ -1 ] ] ). Vector ( ) # musze to zproofreadowac na jakims egzamplu
+
+          elif self. NterDescriptor =='IC':
+
+             return SetOfPoints ( [ COMs [ -1 ], COMs [ 0 ] ] ). Vector ( ) 
+
+          else:
+            print self. NterDescriptor; quit ()
+
+         elif Parametry. HelixDirectionality == 'IC_EC':
+
+          return SetOfPoints ( [ COMs [ -1 ], COMs [ 0 ] ] ). Vector ( )
+
+          
+
+#####################################################################################################################################################
+
+      def HalfHelixAxesDevs ( self ):
+
+
+          """
+          returns Axes for EC and IC segments of Helix
+          """
+
+#          ParametryI = ReadParameterFile ( './DaneWejsciowe/PlikiZParametrami/PlikZParametrami.txt' )
+
+          if Parametry. HalfHelixAxesDefinition == 'COM':
+
+            COMs = self. ThinSlicesCOMs ( )
+
+            if Parametry. HelixDirectionality == 'NterCter':
+
+             if self.NterDescriptor == 'EC': # czy to na pewno poprawnie?
+
+                HalfHelixAxesI = SetOfVectors ( [ SetOfPoints ( [ COMs [ 0 ], COMs [ 1 ] ] ). Vector ( ), SetOfPoints( [ COMs [ 1 ], COMs [ 2 ] ]) . Vector ( ) ] )
+
+             elif self.NterDescriptor == 'IC':
+                                                                  # E            # M                                           #M       #I
+                HalfHelixAxesI = SetOfVectors ( [ SetOfPoints ( [ COMs [ 2 ], COMs [ 1 ] ] ). Vector ( ), SetOfPoints( [ COMs [ 1 ], COMs [ 0 ] ]) . Vector ( ) ] )
+
+            elif Parametry. HelixDirectionality == 'IC_EC' : #powinienem to ogarnac ladnie
+
+                HalfHelixAxesI = SetOfVectors ( [ SetOfPoints ( [ COMs [ 2 ], COMs [ 1 ] ] ). Vector ( ), SetOfPoints( [ COMs [ 1 ], COMs [ 0 ] ]) . Vector ( ) ] )
+
+            else: 
+                print  self.NterDescriptor; quit ()
+
+            return HalfHelixAxesI
+
+          elif Parametry. HalfHelixAxesDefinition == 'PCA':
+# musze ogarnac to
+              
+
+             return [self. ExtractSlice (Range). DistanceToPCAAxis () for Range in Parametry. PCASlicesRanges ]
+
+#####################################################################################################################################################
+
+#      def DistancetoPCAAxis ( self ):
+
+
+
+#          return
+
+#####################################################################################################################################################
+
+      def HalfHelixAxes ( self ):
+
+          """
+          returns Axes for EC and IC segments of Helix
+          """
+
+#          ParametryI = ReadParameterFile ( './DaneWejsciowe/PlikiZParametrami/PlikZParametrami.txt' )
+
+          if Parametry. HalfHelixAxesDefinition == 'COM':
+
+            COMs = self. ThinSlicesCOMs ( )
+
+            if Parametry. HelixDirectionality == 'NterCter':
+
+             if self.NterDescriptor == 'EC': # czy to na pewno poprawnie?
+
+                HalfHelixAxesI = SetOfVectors ( [ SetOfPoints ( [ COMs [ 0 ], COMs [ 1 ] ] ). Vector ( ), SetOfPoints( [ COMs [ 1 ], COMs [ 2 ] ]) . Vector ( ) ] )
+
+             elif self.NterDescriptor == 'IC':
+                                                                  # E            # M                                           #M       #I
+                HalfHelixAxesI = SetOfVectors ( [ SetOfPoints ( [ COMs [ 2 ], COMs [ 1 ] ] ). Vector ( ), SetOfPoints( [ COMs [ 1 ], COMs [ 0 ] ]) . Vector ( ) ] )
+
+            elif Parametry. HelixDirectionality == 'IC_EC' : #powinienem to ogarnac ladnie
+
+                HalfHelixAxesI = SetOfVectors ( [ SetOfPoints ( [ COMs [ 2 ], COMs [ 1 ] ] ). Vector ( ), SetOfPoints( [ COMs [ 1 ], COMs [ 0 ] ]) . Vector ( ) ] )
+
+            else: 
+                print  self.NterDescriptor; quit ()
+
+            return HalfHelixAxesI
+
+          elif Parametry. HalfHelixAxesDefinition == 'PCA':
+
+             return SetOfVectors ( [self. ExtractSlice (Range). AxisPCA () for Range in Parametry. PCASlicesRanges ] )
+# tilt definition gdzie wchodzi?
+#####################################################################################################################################################
+
+      def HalfHelixAxesCOM_Vector ( self ):
+
+            """
+            returns Axes for EC and IC segments of Helix
+            """
+
+#          ParametryI = ReadParameterFile ( './DaneWejsciowe/PlikiZParametrami/PlikZParametrami.txt' )
+
+            COMs = self. ThinSlicesCOMs ( )
+
+            if Parametry. HelixDirectionality == 'NterCter':
+
+             if self.NterDescriptor == 'EC': # czy to na pewno poprawnie?
+
+                HalfHelixAxesI = SetOfVectors ( [ SetOfPoints ( [ COMs [ 0 ], COMs [ 1 ] ] ). Vector ( ), SetOfPoints( [ COMs [ 1 ], COMs [ 2 ] ]) . Vector ( ) ] )
+
+             elif self.NterDescriptor == 'IC':
+                                                                  # E            # M                                           #M       #I
+                HalfHelixAxesI = SetOfVectors ( [ SetOfPoints ( [ COMs [ 2 ], COMs [ 1 ] ] ). Vector ( ), SetOfPoints( [ COMs [ 1 ], COMs [ 0 ] ]) . Vector ( ) ] )
+
+            elif Parametry. HelixDirectionality == 'IC_EC' : #powinienem to ogarnac ladnie
+
+                HalfHelixAxesI = SetOfVectors ( [ SetOfPoints ( [ COMs [ 2 ], COMs [ 1 ] ] ). Vector ( ), SetOfPoints( [ COMs [ 1 ], COMs [ 0 ] ]) . Vector ( ) ] )
+
+            else: 
+                print  self.NterDescriptor; quit ()
+
+            return HalfHelixAxesI
+
+#####################################################################################################################################################
+
+      def HalfHelixAxesPCA ( self ):
+
+          """
+          returns Axes for EC and IC segments of Helix
+          """
+
+          return SetOfVectors ( [ i. AxisPCA( ) for i in self. CutInTwoParts ( ) ] ) # a moze odjac srodkowa czesc
+
+#####################################################################################################################################################
+# mozna sprobowac to, kolejne poprawki dotycza logowania,
+# wykreslenia niepotrzebnego outputu i danie potrzebnego
+# jakies kroki w kierunku tego, zeby bylo mniej dwukrotnej kalkulacji danych
+
+      def Overhang ( self, OverhangRanges = [ [1.0, 10.0], [-10.0, -1.0] ] ):
+
+          COM_EC, COM_MM, COM_IC = self. ThinSlicesCOMs ( ) #[ 0 ]
+
+          """
+          returns the overhang
+          ( it is actually a bit tricky )
+          """
+
+          ZSliceI = self. ZSlice (   OverhangRanges[0][0], OverhangRanges[0][1] )
+          
+          COM_EC = ZSliceI. CenterOfMass ( )
+          
+          Axis1 = ZSliceI. AxisPCA ( )
+          
+          ScalingFactor = -COM_EC[2]/Axis1 [2]
+          Axis1 = Axis1. Scale ( ScalingFactor )
+
+          ZSliceI = self. ZSlice ( OverhangRanges[1][0], OverhangRanges[1][1] )
+          COM_IC = ZSliceI. CenterOfMass ( )
+          Axis2 = ZSliceI. AxisPCA ( )
+          ScalingFactor = -COM_IC[2]/Axis2 [2]
+          Axis2 = Axis2. Scale ( ScalingFactor )
+
+#          print Axis2
+
+          P1 = Point(COM_EC); P2 = Point(COM_IC);
+
+          P1. Translate ( Axis1 ); P2. Translate ( Axis2 );
+
+#          print P1; print P2; quit ()
+
+
+          return SetOfPoints ( [ P1, P2 ] ). Distance ( )
+
+# overhang can be calculated in simplified way or in the exact way
+# simplified way assumes that overhang occurs in the middle of membrane
+# thus overhang is the XY distance between COM of Epsilon1 width
+# at ( Z + Epsilon2 ) to (Z - Epsilon2)
+
+#####################################################################################################################################################
+
+      def KinkAngle ( self ):
+
+#          print self. HalfHelixAxes(). AngleDEG ( )
+#          quit()
+          return self. HalfHelixAxes(). AngleDEG ( )
+
+#####################################################################################################################################################
+
+      def OverhangLength ( self ):
+
+          Slice1 = self. ZSlice ( -4.0 , 0.0 ). CenterOfMass ( )
+          Slice2 = self. ZSlice (  0.0 ,  4.0 ). CenterOfMass ( )
+
+
+          return SetOfPoints ( [Slice1, Slice2 ] ). Distance ( )
+# nalezy to usprawnic, podobnie jak tez funkcjonowanie calego programu
+# tak wiec zostawimy ten program na razie :) i nei bedziemy go ruszac
+#####################################################################################################################################################
+# czytanie z pliku, a potem z .xls
+
+      def TiltPCA ( self ):
+
+          """
+          returns the Tilt PCA of a Helix
+          """
+#          self. AxisPCA ( ). Print ( )
+
+          return self. AxisPCA ( ). AngleToZAxis ( )
+
+#####################################################################################################################################################
+
+      def TiltCOM_Vector ( self ):
+
+          """
+          returns the Tilt COM of a Helix
+          """
+#          self. AxisCOM_Vector ( ). Print ( )
+
+          return self. AxisCOM_Vector ( ). AngleToZAxis ( )
+
+#####################################################################################################################################################
+
+      def Tilt ( self ):
+
+          """
+          returns the Tilt of a Helix
+          """
+          self. MainAxis ( ). Print ( )
+
+          return self. MainAxis ( ). AngleToZAxis ( )
+
+#####################################################################################################################################################
+
+      def HalfHelixTilts ( self ):
+
+          """
+          returns the Tilts for each of the Two Segments
+          """
+# parametryzacja! niekoniecznie smallest angle 
+#          print [ i. AngleToZAxis ( ) for i in self. HalfHelixAxes ( ). Content ]
+
+
+          return [ i. AngleToZAxis ( ) for i in self. HalfHelixAxes ( ). Content ]
+
+#####################################################################################################################################################
+
+      def HalfHelixTiltsPCA ( self ):
+
+          """
+          returns the Tilts for each of the Two Segments
+          """
+# parametryzacja! niekoniecznie smallest angle 
+#          print [ i. AngleToZAxis ( ) for i in self. HalfHelixAxes ( ). Content ]
+
+
+          return [ i. AngleToZAxis ( ) for i in self. HalfHelixAxesPCA ( ). Content ]
+
+#####################################################################################################################################################
+
+      def HalfHelixTiltsCOM_Vector ( self ):
+
+          """
+          returns the Tilts for each of the Two Segments
+          """
+# parametryzacja! niekoniecznie smallest angle 
+#          print [ i. AngleToZAxis ( ) for i in self. HalfHelixAxes ( ). Content ]
+
+
+          return [ i. AngleToZAxis ( ) for i in self. HalfHelixAxesCOM_Vector ( ). Content ]
+
+
+#####################################################################################################################################################
+
+      def AminoAcidMembraneDepthPreferenceLexicon ( self, BordersOfSlices ):
+
+          AminoacidsOneLetter = [' R', 'H', 'K', 'D', 'E', \
+                         'S', 'T', 'N', 'Q', \
+                         'C', 'U', 'G', 'P', \
+                         'A', 'V', 'I', 'L', \
+                         'M', 'F', 'Y', 'W'  ] # list of 21 aminoacids
+
+          AminoAcidMembraneDepthPreferenceLexiconI = { }
+
+          for Slice in self.ZSlices ( BordersOfSlices ):
+
+              for AA in AminoacidsOneLetter: AminoAcidMembraneDepthPreferenceLexiconI [AA] += Slice.AASEQ.count (AA)
+
+          return AminoAcidMembraneDepthPreferenceLexiconI
+          
+#####################################################################################################################################################
+
+      def ZSlices ( self, BordersOfSlices ):
+
+          """
+          extracts Z slices based on Z ranges
+          """
+
+          TMHelixInstances = [ ]; Slices = [ ]
+
+          for N in range ( len ( BordersOfSlices ) ):
+              Slices. append ( [ ] )
+
+# zamiast appendu mozna by transformowac tak jak te listy = TMHelix (i) for i in sthg 
+
+          for ResidueInstance in self.Content:
+
+              Atom_Z = ResidueInstance.CA ().Z
+
+              for N in range ( len ( BordersOfSlices ) ):
+
+                  if Atom_Z >= BordersOfSlices [N][0] and Atom_Z <= BordersOfSlices [N][1]:
+                     Slices [N].append ( ResidueInstance )
+
+          return [ TMHelix ( Slice, self.ID ) for Slice in Slices ]
+
+#####################################################################################################################################################
+
+      def ExtractSlice ( self, BordersOfSlice ):
+
+          """
+          extracts Z slices based on Z ranges
+          """
+
+          Slice = [ ]
+
+# zamiast appendu mozna by transformowac tak jak te listy = TMHelix (i) for i in sthg 
+
+          for ResidueInstance in self.Content:
+
+              Atom_Z = ResidueInstance.CA ().Z
+
+              if Atom_Z >= BordersOfSlice [0] and Atom_Z <= BordersOfSlice [1]:
+                 Slice. append ( ResidueInstance )
+
+          return  TMHelix ( Slice, self.ID )
+
+#####################################################################################################################################################
+# those three should be merged 
+#sparametryzowac to, o ile nie jest sparametryzowane ...
+      def CutInNParts ( self, \
+                            BordersOfSlices = [ [ 10.0, 15.0 ], \
+                                              [-10.0, 10.0 ],
+                                              [-15.0,-10.0 ] ] \
+                                                                 ): # basically split Helix Atoms into Three parts EC, MM, IC
+
+#          ParametersInstance
+
+          """
+          cuts the Helix into N Segments based on Z coordinate ranges input
+          """
+
+          return self. ZSlices ( BordersOfSlices )
+
+#####################################################################################################################################################
+
+      def ExtractThinSlices ( self ):
+# musimy to zmienic, potrzebna bedzie czekolada
+          """
+          returns segments extracted based on z coordinate ranges ( thin slices defined in parameter file )
+          """
+
+#          BordersOfThinSlices = Parametry. BordersOfThinSlices;
+
+          return self. ZSlices ( Parametry. BordersOfThinSlices )
+
+#####################################################################################################################################################
+
+      def ExtractWideSlices ( self ):
+
+          """
+          returns segments extracted based on z coordinate ranges ( wide slices defined in parameter file )
+          """
+
+          return self. ZSlices ( Parametry. BordersOfWideSlices )
+
+#####################################################################################################################################################
+
+      def ThinSlicesCOMs ( self ): 
+
+          return [ ThinSlice. CenterOfMass ( ) for ThinSlice in self. ExtractThinSlices ( ) ]
+
+#####################################################################################################################################################
+
+      def CutInTwoParts ( self ): # basically split Helix Atoms into Two Parts EC and IC, zostaje zlikwidowane,
+# bedzie tylko wycinanie z slajsow 
+
+          BordersOfSlices = [ [ 2.0, 12.0 ], [ -12.0, -2.0 ] ]
+                                  
+          return self. ZSlices ( BordersOfSlices ) #zwraca TMHelix, ale slicey
+# sa zle bo nie ogarniaja srodka, powinienem to przerobic co zaraz moze i zrobie
+
+# to mozemy zmienic i wtedy sa inne granice ...
+#####################################################################################################################################################
+
+      def ZSlice ( self, Zmin, Zmax ):
+
+          self.ZSliceI = [ ]
+
+          for ResidueInstance in self.Content:
+
+              Res_Z = ResidueInstance.Z ( )
+
+              if Res_Z >= Zmin and Res_Z <= Zmax: # musze cos wymyslec zeby bylo od razu wiadomo ktory punkt jest od ktorej helisy...
+
+                 self.ZSliceI.append ( ResidueInstance )
+
+# Craziness! Why does it work one time and then doesnt work second time?
+# rule of thumb. when stuff goes crazy, makes some order! at least in all the dependent classes!
+
+          return TMHelix ( self.ZSliceI, self.ID )  
+
+#####################################################################################################################################################
+
+      def ZPoint ( self, Zmin, Zmax ):
+
+          """
+          returns a CenterOfMass for a ZSlice
+          """
+
+          self.ZSlice = self.ZSlice ( Zmin, Zmax )
+
+          self.ZPoint = SetOfAtoms ( self.ZSlice ).CenterOfMass ( )
+                    
+          return self.ZPoint
+
+#####################################################################################################################################################
+
+      def CAsCenterOfMass ( self ):
+
+          return self. CAs ( ). CenterOfMass ( )
+
+#####################################################################################################################################################
+
+      def CalculateNterDescriptor ( self ):
+
+          """
+          returns Nter location (EC or IC)
+          """
+
+          self.FirstRes_Z = self. Content [ 0 ] .Z ( )
+
+          if self.FirstRes_Z >= 0.0:
+
+             self. NterDescriptor = 'EC'
+
+          else:
+
+             self. NterDescriptor = 'IC'
+
+#####################################################################################################################################################
+
+      def ThinSlicesAASEQ ( self ):
+
+          """
+          return AminoAcid sequences of Slices          
+          """
+
+          return [ i. AASEQ ( ) for i in self. ExtractThinSlices ( ) ]
+
+#####################################################################################################################################################
+
+      def WideSlicesAASEQ ( self ):
+
+          """
+          return AminoAcid sequences of Slices          
+          """
+
+          return [ i. AASEQ ( ) for i in self. ExtractWideSlices ( ) ]
+
+#####################################################################################################################################################
+
+      def COM_Axes_EC_MM_IC ( self ): #sprobujemy tak :), nie wiem czemu tamto fitowanie nie wychodzi, moze zle osie dobralem, musze poczytac to PCA :), instrukcje i wszystko, ze slownikiem moze nawet
+
+          import GeometricalClassesModule; from GeometricalClassesModule import SetOfPoints;
+
+          COM_EC_MM_IC_I = [ ]
+
+          for Part in self. ExtractThinSlices ( ):
+
+              Part_CAs = SetOfAtoms ( Part.CAs () )
+#              Part_CAs. Print ( )
+
+              COM_EC_MM_IC_I. append ( Part_CAs.CenterOfMass ( ) )
+
+          COM_ME_Axis = SetOfPoints ( [ COM_EC_MM_IC_I [ 1 ], COM_EC_MM_IC_I [ 0 ] ] ). Vector ( ) # chwilowo EC axis robi za cala os
+
+          COM_IM_Axis = SetOfPoints ( [ COM_EC_MM_IC_I [ 2 ], COM_EC_MM_IC_I [ 1 ] ] ). Vector ( )
+
+          return [ COM_ME_Axis, COM_IM_Axis ]
+# wiec tak, wektor podobnie jak i polosie powinny byc skierowane raczej do gory, inaczej jest slabo ;-), ale teraz potrzebuje piwa i cos zjesc
+# chyba czas na chate, jeszcze jakies piwo uda mi sie kupic
+#####################################################################################################################################################
+
+      def FirstCA_ThirdCAVector ( self ): # i to trzeba dodac do reprezentacji 
+          import AtomRecordsModule; from AtomRecordsModule import Setof2AtomRecords;
+
+          FirstCA, ThirdCA = [ self.Content [ 0 ].CA (), self.Content [ 2 ].CA () ]
+
+          FirstCA_ThirdCAVectorI = Setof2AtomRecords ( [ FirstCA, ThirdCA ] ) . Vector ( )
+
+#          print 'FirstCA_ThirdCAVectorI '+str ( Setof2AtomRecords ( [ FirstCA, ThirdCA ] ) . Vector ( ) )
+          return FirstCA_ThirdCAVectorI   
+
+#####################################################################################################################################################
+
+      def EC_IC_1_3_VECs ( self ):
+
+          return [ i. FirstCA_ThirdCAVector ( ) for i in self. CutInTwoParts ( ) ]
+
+#####################################################################################################################################################
+
+      def DirectToEC ( self ):
+          return DirectedHelix    
+# zeby to stestowac bede musial sobie wybrac jeden tryplet i przerobic w drugi tryplet na przyklad 1U19 5,6,7 w 
+# CXCR4 3ODU :) 
+
+#####################################################################################################################################################
+
+      def FitToRepresentation ( self ):
+
+          TranslationVector = SetOf2_3DPoints ( [ IC_COM_Model, IC_COM_Template ] )
+          self.Translate ( TranslationVector)
+
+          RotationMatrix = MinimalRotation ( [ IC_COM_Model, EC_COM_Model ], [ IC_COM_Template, EC_COM_Template ] )
+
+          self.Rotate ( RotationMatrix )
+
+          Origin = [ 0.0, 0.0, 0.0 ]
+
+#          RotationMatrix = MinimalRotation ( [ Origin, 1_3Vector_Model ], [ Origin, 1_3Vector_Template ] )
+
+          self.Rotate ( RotationMatrix )
+# musi troche polezec, powinienem w miedzyczasie zdefiniowac tez funkcje plotujace rozne ciekawe rzeczy 
+
+# Dane HelixRep[ECPoint,ICPoint,EC_1-3Vec] , HelixTemplateRep [TempECPoint, TempICPoint, TempEC_1-3Vec]
+# Step 1 ) ECPoint-TRANSLATE-> TempECPoint
+# Step 2 ) ICPoint-ROTATE-> TempICPoint
+# Step 3 ) EC_1-3Vec-ROTATE-> TempEC_1-3Vec]
+
+#          FitICPointTo
+
+# musze zdefiniowac rotacje i translacje  
+
+#####################################################################################################################################################
+
+      def Translate ( self, TranslationVector ):
+
+          """
+          translates helix by vector
+          """
+
+          TranslatedResidues = [ ResidueInstance.Translate ( TranslationVector ) for ResidueInstance in self.Content ]
+
+          self. Content = [i for i in TranslatedResidues ]
+
+          return 
+
+#####################################################################################################################################################
+
+      def Rotate ( self, RotationMatrix ):
+
+          """
+          Rotates a Helix by Rotation Matrix
+          """
+
+          RotatedResidues = [ ResidueInstance. Rotate ( RotationMatrix ) for ResidueInstance in self.Content ]
+
+          self. Content = [i for i in RotatedResidues ]
+       
+#####################################################################################################################################################

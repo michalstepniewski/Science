@@ -1,0 +1,296 @@
+import sys
+
+############################################################################################################################
+
+def RenumberAtom (AtomLine, Delta):
+
+#;   nr       type  resnr residue  atom   cgnr     charge       mass  typeB    chargeB      massB
+#; residue   1 MET rtp MET  q +1.0
+#     1        NH3      1    MET      N      1       -0.3     14.007   ; qtot -0.3
+#     2         HC      1    MET     H1      2       0.33      1.008   ; qtot 0.03
+
+    Nr = int (AtomLine[:7])
+
+    NewAtomLine = '%7d'%(Nr+Delta)+AtomLine[7:40]+'%7d'+AtomLine[47:] 
+
+    return NewAtomLine
+
+############################################################################################################################
+
+def ParseAtomsForInsertions (AtomLines):
+
+    Insercje = [ ]
+
+    PreviousNr = 0
+
+    for AtomLine in AtomLines:
+
+#;   nr       type  resnr residue  atom   cgnr     charge       mass  typeB    chargeB      massB
+#; residue   1 MET rtp MET  q +1.0
+#     1        NH3      1    MET      N      1       -0.3     14.007   ; qtot -0.3
+#     2         HC      1    MET     H1      2       0.33      1.008   ; qtot 0.03
+
+        Nr = int (AtomLine[:7])
+
+        NewAtomLine = '%7d'%(Nr+Delta)+AtomLine[7:40]+'%7d'+AtomLine[47:] 
+
+        if ( Nr - PreviousNr ) != 1:
+
+           Insercja = [ Nr-PreviousNr, Nr + (Nr-PreviousNr) ]
+
+           Insercje. append (Insercja)
+
+        PreviousNr = Nr
+
+    return Insercje
+
+############################################################################################################################
+
+def RemoveInsertions (Insertions, AtomLines, BondLines, PairLines, AngleLines, DihedralLines, CmapLines ):
+
+    for Insercja in Insercje:
+
+        AtomLines  = RenumberAtomsFrom ( AtomLines, Insercja [0], Insercja [1] )
+
+        BondLines  = RenumberBondsFrom ( BondLines, Insercja [0], Insercja [1] )
+
+        PairLines  = RenumberPairsFrom ( PairLines, Insercja [0], Insercja [1] )
+
+        AngleLines = RenumberAnglesFrom ( AngleLines, Insercja [0], Insercja [1] )
+
+        DihedralLines = RenumberDihedralsFrom ( DihedralLines, Insercja [0], Insercja [1] )
+
+        CmapLines  = RenumberCmapsFrom ( CmapLines, Insercja [0], Insercja [1] )
+
+    return [ AtomLines, BondLines, PairLines, AngleLines, DihedralLines, CmapLines ]
+
+############################################################################################################################
+
+def CutFileIntoSections (InFilePath):
+
+    InFile  = open ( InFilePath, 'r' )
+    InLines = InFile. readlines ()
+    InFile. close ()
+
+
+    
+
+    return Sections
+
+############################################################################################################################
+
+def RenumberFile (InFilePath, OutFilePath):
+
+    AtomLines, BondLines, PairLines, AngleLines, DihedralLines, CmapLines = CutFileIntoSections (InFilePath)
+
+    Insercje   = ParseAtomsForInsertions (AtomLines)
+
+    NoweSekcje = RemoveInsertions (Insertions, AtomLines, BondLines, PairLines, AngleLines, DihedralLines, CmapLines )
+
+    OutputSections ( Sections, OutFilePath)
+
+    return
+
+############################################################################################################################
+
+def OutputSections ( Sections, OutFilePath):
+
+    OutFile = open ( OutFilePath, 'w' )
+
+    for Section in Sections:
+
+        for OutLine in Section:
+
+            OutFile. write ( Line )
+
+    OutFile. flush ()
+    OutFile. close ()
+
+    return
+
+#jutro to skoncze rano
+############################################################################################################################
+
+def RenumberAtoms (AtomLines, Delta):
+
+    return [ RenumberAtom (AtomLine, Delta) for AtomLine in AtomLines ]
+
+############################################################################################################################
+
+def RenumberAtomsFrom ( AtomLines, Delta, FirstIndex):
+
+    NewAtomLines = AtomLines [ : FirstIndex]
+    
+    for AtomLine in AtomLines [ FirstIndex : ]:
+
+        NewAtomLines. append ( RenumberAtom (AtomLine, Delta) )
+ 
+    return NewAtomLines
+
+#teraz insercje w atomach zdeterminuje renumerowanie wszystkich rzeczy
+############################################################################################################################
+
+def RenumberBond (BondLine, Delta):
+
+    Nr1 = int(BondLine[:6])
+
+    Nr2 = int(BondLine[7:12])
+
+    NewBondLine ='%7d %7d'%(Nr1+Delta, Nr2+Delta)+BondLine[12:]
+
+    return NewBondLine
+
+############################################################################################################################
+
+def RenumberBonds (BondLines, Delta):
+
+    return [ RenumberBond (BondLines, Delta) for BondLine in BondLines ]
+
+############################################################################################################################
+
+def RenumberBondsFrom (BondLines, Delta, FirstIndex):
+# to musze zrobic inaczej
+    NewBondLines = BondLines [ : FirstIndex ]
+
+    for BondLine in BondLines [ FirstIndex : ]:
+
+        NewBondLines. append ( RenumberBond (BondLine, Delta) )
+
+    return NewBondLines
+
+############################################################################################################################
+
+def RenumberPair (PairLine, Delta):
+
+    Nr1 = int(PairLine[:6])
+
+    Nr2 = int(PairLine[7:12])
+
+    NewPairLine ='%7d %7d'%(Nr1+Delta, Nr2+Delta)+PairLine[12:]
+
+    return NewPairLine
+
+############################################################################################################################
+
+def RenumberPairs (PairLines, Delta):
+
+    return [ RenumberPair (PairLines, Delta) for PairLine in PairLines ]
+
+############################################################################################################################
+
+def RenumberPairsFrom (PairLines, Delta, FirstIndex):
+
+    NewPairLines = PairLines [ : FirstIndex ]
+
+    for PairLine in PairLines [ FirstIndex : ]:
+
+        NewPairLines. append ( RenumberPair (PairLine, Delta) )
+
+    return NewPairLines
+
+############################################################################################################################
+
+def RenumberAngle (AngleLine, Delta):
+
+    Nr1 = int(AngleLine[  : 6])
+
+    Nr2 = int(AngleLine[ 7:12])
+
+    Nr3 = int(AngleLine[13:18])
+
+    NewAngleLine ='%7d %7d %7d'%(Nr1+Delta, Nr2+Delta, Nr3+Delta)+AngleLine[18:]
+
+    return NewAngleLine
+
+############################################################################################################################
+
+def RenumberAnglesFrom (AngleLines, Delta, FirstIndex):
+
+    NewAngleLines = AngleLines [ : FirstIndex ]
+
+    for AngleLine in AngleLines [ FirstIndex : ]:
+
+        NewAngleLines. append ( RenumberAngle (AngleLine, Delta) )
+
+    return NewAngleLines
+
+############################################################################################################################
+
+def RenumberAngles (AngleLines, Delta):
+
+    return [ RenumberAngle (AngleLines, Delta) for AngleLine in AngleLines ]
+
+############################################################################################################################
+
+def RenumberDihedral (DihedralLine, Delta):
+
+    Nr1 = int(DihedralLine[  : 6])
+
+    Nr2 = int(DihedralLine[ 7:12])
+
+    Nr3 = int(DihedralLine[13:18])
+
+    Nr4 = int(DihedralLine[19:24])
+
+    NewAngleLine ='%7d %7d %7d %7d'%(Nr1+Delta, Nr2+Delta, Nr3+Delta, Nr4+Delta)+DihedralLine[24:]
+
+    return NewDihedralLine
+
+############################################################################################################################
+
+def RenumberDihedralsFrom (DihedralLines, Delta, FirstIndex):
+
+    NewDihedralLines = DihedralLines [ : FirstIndex ]
+
+    for DihedralLine in DihedralLines [ FirstIndex : ]:
+
+        NewDihedralLines. append ( RenumberDihedral (DihedralLine, Delta) )
+
+    return NewDihedralLines
+
+############################################################################################################################
+
+def RenumberDihedrals (DihedralLines, Delta):
+
+    return [ RenumberDihedral (DihedralLines, Delta) for DihedralLine in DihedralLines ]
+
+############################################################################################################################
+
+def RenumberCmap (DihedralLine, Delta):
+
+    Nr1 = int(DihedralLine[  : 6])
+
+    Nr2 = int(DihedralLine[ 7:12])
+
+    Nr3 = int(DihedralLine[13:18])
+
+    Nr4 = int(DihedralLine[19:24])
+
+    Nr5 = int(DihedralLine[19:24])
+
+    NewAngleLine ='%7d %7d %7d %7d %7d'%(Nr1+Delta, Nr2+Delta, Nr3+Delta, Nr4+Delta, Nr5+Delta)+DihedralLine[30:]
+
+    return NewCmapLine
+
+############################################################################################################################
+
+def RenumberCmaps (CmapLines, Delta):
+
+    return [ RenumberCmap (CmapLines, Delta) for CmapLine in CmapLines ]
+
+############################################################################################################################
+
+def RenumberCmapsFrom (CmapLines, Delta, FirstIndex):
+
+    NewCmapLines = CmapLines [ : FirstIndex ]
+
+    for CmapLine in CmapLines [ FirstIndex : ]:
+
+        NewCmapLines. append ( RenumberCmap (CmapLine, Delta) )
+
+    return NewCmapLines
+
+############################################################################################################################
+
+RenumberFile (sys.argv[1], sys.argv[2])
+

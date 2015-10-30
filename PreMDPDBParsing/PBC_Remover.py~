@@ -1,0 +1,116 @@
+# biore rozmiary i musze samemu nauczyc sie usuwac PBC ... za pomoca rozmiarow pudelka
+# wszystko co jest wieksze przewijam
+# GRO pbc remover
+# moze zrobie to jutro rano
+# jutro o 14 zawijam sie do domu
+
+import sys
+
+# 31 - 38        Real(8.3)       Orthogonal coordinates for X in Angstroms.                       
+# 39 - 46        Real(8.3)       Orthogonal coordinates for Y in Angstroms.                            
+# 47 - 54        Real(8.3)       Orthogonal coordinates for Z in Angstroms.
+
+###################################################################################################
+
+def RemovePBCCoord (coord,BoxDim):
+
+    fcoord = float(coord)
+    
+    if fcoord >= BoxDim:
+
+       NewFcoord = fcoord - BoxDim
+
+    else: NewFcoord = fcoord
+
+    return '%8.3f' % NewFcoord
+
+###################################################################################################
+
+def RemovePBCCoordZ (coord,BoxDim):
+
+    fcoord = float(coord)
+    
+    if fcoord >= 60.0:
+
+       NewFcoord = fcoord - BoxDim
+
+    else: NewFcoord = fcoord
+
+    return '%8.3f' % NewFcoord
+
+#a = "i am a %s" % sub1
+
+###################################################################################################
+
+def RemovePBCLine (Line, BoxDims):
+
+    Xdim, Ydim, Zdim = BoxDims
+
+    X, Y, Z = [ Line [31-1:38], Line[39-1:46], Line[47-1:54] ]
+
+    NewLine = Line[:30] + RemovePBCCoord (X,Xdim) + RemovePBCCoord (Y,Ydim) + RemovePBCCoordZ (Z,Zdim) + Line[55:]
+    
+    return NewLine
+
+###################################################################################################
+
+def RemovePBCLineZOnly (Line, BoxDims):
+
+    Xdim, Ydim, Zdim = BoxDims
+
+    X, Y, Z = [ Line [31-1:38], Line[39-1:46], Line[47-1:54] ]
+
+    NewLine = Line[:30] + X + Y + RemovePBCCoordZ (Z,Zdim) + Line[55:]
+    
+    return NewLine
+
+###################################################################################################
+
+def RemovePBCLines(lines):
+    NewLines = []
+
+    for line in lines:
+
+        if line[:6] == 'CRYST1':
+
+           BoxDims = [ float(line[7-1:15]), float(line[16-1:24]), float(line[25-1:33]) ]
+           print BoxDims
+           NewLines. append (line)
+
+# 7 - 15       Real(9.3)      a (Angstroms)
+#16 - 24       Real(9.3)      b (Angstroms)     
+#25 - 33       Real(9.3)      c (Angstroms)
+
+        elif line [:4] == 'ATOM':
+
+           NewLine = RemovePBCLineZOnly (line, BoxDims)
+           NewLines. append (NewLine)
+
+        else: NewLines. append (line)
+
+    return NewLines
+
+###################################################################################################
+
+def RemovePBCFile(FilePath, OutFilePath):
+
+    File = open ( FilePath, 'r')
+
+    Lines = File. readlines ();
+
+    File. close ()
+
+    NewLines = RemovePBCLines ( Lines )
+
+    OutFile = open ( OutFilePath, 'w' )
+
+    for NewLine in NewLines:
+
+        OutFile. write ( NewLine )
+
+    OutFile. flush ()
+    OutFile. close ()
+
+    return
+
+RemovePBCFile( sys.argv[1], sys.argv[2])    

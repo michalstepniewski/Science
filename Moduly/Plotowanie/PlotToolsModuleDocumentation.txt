@@ -1,0 +1,11 @@
+PATH = '/home/soutys/Science/HelixNsets/Program/Wersje/2013_06_20/Moduly/Plotowanie'
+
+# ModuleName = PlotToolsModule
+
+# Zawiera funkcje:
+
+                   HistogramPlot ( H2Xs, OutputFile )
+
+                   BarPlot ( InputArray, OutputFile )
+
+

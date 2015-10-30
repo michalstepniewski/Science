@@ -1,0 +1,392 @@
+# zadanie na dzis jest tak zmienic program zeby wiecej bylo mozliwosci modyfikacji jego dzialania
+import os, sys
+
+import N_TMs_Set; from  N_TMs_Set import N_TMs_Set;
+import RepresentationFilesDatasetModule
+from RepresentationFilesDatasetModule import ReadRepresentationFileContents
+import TMHelixModule; from TMHelixModule import TMHelix
+import ProteinChainModule; from ProteinChainModule import ProteinChain, MSegment
+import Parametry
+
+#####################################################################################################################################################
+#####################################################################################################################################################
+
+class PdbFileContent ( list ):                                         # contents of PDB file
+
+   def __init__ ( self, InputPdbRecords ):
+
+      import PdbRecordModule; from  PdbRecordModule import * 
+
+      self.Content = [ ] # consists of PdbRecords
+
+      for InputPdbRecord in InputPdbRecords:
+
+          PdbRecordInstance = PdbRecord ( InputPdbRecord ) # this is fine as the record comes as .s, its a normal string, see how it works out later or maybe, hmmm, I should make order making it from PDB Records.s
+
+# zla superpozycja jest wynikiem braku centeringu, funkcja RMSD musi zawierac w sobie centering, inaczej nie bedzie dzialac
+# tak samo optimal superposition
+          
+#          self.Content. append ( PdbRecordInstance )
+          self.Content. append ( PdbRecordInstance )
+      return
+
+#####################################################################################################################################################
+
+   def Translate ( self, Vector ):
+
+       return PdbFileContent ( [ Atom.Translate ( Vector ) for Atom in self.AtomRecords ( ). Content ] )
+
+#####################################################################################################################################################
+
+   def RotateByMatrix ( self, RotationMatrix ):
+
+#       print len ( self.AtomRecords ( ). Content )
+
+#       print len ( [ Atom.RotateByMatrix ( RotationMatrix ) for Atom in self.AtomRecords ( ). Content ] )
+
+       return PdbFileContent ( [ Atom.RotateByMatrix ( RotationMatrix ) for Atom in self.AtomRecords ( ). Content ] )
+
+#####################################################################################################################################################
+
+   def ReadNSetFromOwnPDB ( self ):
+
+       self.AtomRecords ( )
+
+       return
+
+#####################################################################################################################################################
+
+   def AtomRecords ( self ):                                        # extract ATOM records
+
+      import PdbRecordModule; from PdbRecordModule import *;
+      import AtomRecordsModule; from AtomRecordsModule import *;      
+      import AtomRecordModule; from AtomRecordModule import *; 
+
+      self.AtomRecordsI= []
+
+      for PdbRecordInstance in self.Content:
+
+         if PdbRecordInstance.Type()=='ATOM  ':
+
+            self.AtomRecordsI.append( AtomRecord ( PdbRecordInstance.s ) ) # so it is an instance
+
+      return AtomRecords ( self.AtomRecordsI )
+
+#####################################################################################################################################################
+
+   def Write (self, path):                                                # Write to File
+
+      OpenedFile = open(path,'w')
+
+      for PdbRecordInstance in self.Content:
+
+         OpenedFile.write ( PdbRecordInstance.s )
+
+      OpenedFile.flush()
+      OpenedFile.close()
+
+#####################################################################################################################################################
+
+   def ExtractProteinResidues ( self ):
+
+       self.AtomRecordsInstances = self.AtomRecords ( )
+
+       self.ProteinResidueInstances = self.AtomRecordsInstances.ExtractProteinResidues ( )
+   
+       return self.ProteinResidueInstances
+
+
+#################### this extracts Protein Chains from PDB file #####################################################################################
+
+   def ExtractProteinChains ( self, OutputPath = 'ExtractedProteinChains' ): # nie podoba mi sie to ze nie jest podzielone na aminokwasy, bo powinno sie skladac z reszt, ale musze isc z tym dalej
+
+       import ProteinChainModule; from ProteinChainModule import ProteinChain;
+
+       self. ProteinChainInstances, self. ProteinChainI  = [ [ ],[ ] ];
+       
+       self.ProteinResidueInstances = self.ExtractProteinResidues ( );
+
+       self. ProteinChainI. append ( self.ProteinResidueInstances [ 0 ] )         
+
+       for N in range ( 1, len ( self.ProteinResidueInstances ) ):
+
+           if self.ProteinResidueInstances [ N ]. Chain ( ) != self.ProteinResidueInstances [ N-1 ]. Chain ( ):
+
+              ProteinChainInstance = ProteinChain ( self.ProteinChainI, self.ProteinResidueInstances [ N-1 ]. Chain ( )  )
+              self.ProteinChainInstances. append ( ProteinChainInstance )
+
+              self.ProteinChainI = [ ];
+              self.ProteinChainI. append ( self.ProteinResidueInstances [ N ] )
+              ProteinChainInstance.OutputToPdbFile ( OutputPath )
+
+           else:
+
+              self.ProteinChainI. append ( self.ProteinResidueInstances [ N ] )
+
+#       ProteinChain ( self.ProteinChainI ) .Print ( )
+
+       ProteinChainInstance = ProteinChain ( self.ProteinChainI, self.ProteinResidueInstances [ N ]. Chain ( ) )
+
+       self.ProteinChainInstances. append ( ProteinChainInstance )  
+#       print 'lala'
+#       ProteinChain ( self.ProteinChainI ). Print ( )
+#       print 'lala'
+
+       ProteinChainInstance.OutputToPdbFile ( OutputPath )
+
+       return self.ProteinChainInstances
+
+#####################################################################################################################################################
+
+   def ExtractTriplets( self ):
+# write triplets to separate files annotating if AllInteracting or NotAllInteraction in FileName
+       return [ NoAllInteractingTriplets, NoNotAllInteractingTriplets ]
+
+#####################################################################################################################################################
+
+   def ExtractConsecutiveTriplets ( self, OutputPath ): # sciezka zdefiniowana na wejsciu, musi byc jednak oddzielny katalog dla kazdego PDB, i musze lepiej zdiagnozowac co sie tam dzieje ....
+
+       import ProteinChainModule; from ProteinChainModule import ProteinChain;
+       import SetOfN_TMHelicesModule; from SetOfN_TMHelicesModule import *;
+       import SetOf3TMHelicesModule; from SetOf3TMHelicesModule import *;
+       import SetOfTripletsModule; from SetOfTripletsModule import ConsecutiveTriplets;
+
+       ProteinChainInstances = self.ExtractProteinChains ( )
+
+       for ProteinChainInstance in ProteinChainInstances:
+
+           TMHelicesInstance = TMHelices ( ProteinChainInstance.TMSegments ( ) ) # so switch to TM segments
+#ok where is this class, actually
+#           TMHelicesInstance.Print ( )
+           if TMHelicesInstance.Content!= []:
+              ConsecutiveTripletsInstance = ConsecutiveTriplets ( TMHelicesInstance.ExtractConsecutiveTriplets ( ) ) # which gives us a list of lists
+#           ConsecutiveTripletsInstance.Print ( )
+#_curated_lig_2_transformed.pdb
+# one task is to write it down
+# task is to write down the numbers of helices?
+              OutputPath2 = OutputPath.replace('_curated_lig_2_transformed.pdb','') +'_'+ ProteinChainInstance.ChainID+'_'
+
+              ConsecutiveTripletsInstance. OutputToPdbFiles ( OutputPath2 ) # i teraz jaka to bedzie sciezka :)
+
+              NterOrientation_I = ProteinChainInstance.ProteinNterOrientation ( )
+
+              ConsecutiveTripletsInstance.OutputRepresentations ( NterOrientation_I, OutputPath2  )
+
+       return ConsecutiveTripletsInstance
+
+#####################################################################################################################################################
+# moze musze sie napic i zrobic sobie przerwe
+
+# tak wiec musze uporzadkowac
+
+   def ExtractTouchingTriplets ( self, OutputPath ): # sciezka zdefiniowana na wejsciu, musi byc jednak oddzielny katalog dla kazdego PDB, i musze lepiej zdiagnozowac co sie tam dzieje ....
+
+       import ProteinChainModule; from ProteinChainModule import ProteinChain;
+       import SetOfN_TMHelicesModule; from SetOfN_TMHelicesModule import *;
+       import SetOf3TMHelicesModule; from SetOf3TMHelicesModule import *;
+       import SetOfTripletsModule; from SetOfTripletsModule import TouchingTriplets;
+
+       ProteinChainInstances = self.ExtractProteinChains ( )
+#       ProteinChainInstances [0].Print ( )
+#       quit ( )
+#       print ProteinChainInstances [ 0 ].Content [ 0 ]. Content [ 0 ]
+#       quit ()
+# a powinno byc z residuow chyba, czy nie :-/ 
+#       TMHelicesInstance = TMHelices ( ProteinChainInstance.TMHelices ( ) )
+#       TMHelicesInstance = TMHelices ( ProteinChainInstance.MRegionResiduesSegments ( ) ) # so switch to residue segments
+       for ProteinChainInstance in ProteinChainInstances:
+
+           TMHelicesInstance = TMHelices ( ProteinChainInstance.TMSegments ( ) ) # so switch to TM segments
+#ok where is this class, actually
+#           TMHelicesInstance.Print ( )
+           if TMHelicesInstance.Content!= []:
+              TouchingTripletsInstance = TouchingTriplets ( TMHelicesInstance.ExtractTouchingTriplets ( ) ) # which gives us a list of lists
+#           ConsecutiveTripletsInstance.Print ( )
+#_curated_lig_2_transformed.pdb
+# one task is to write it down
+# task is to write down the numbers of helices?
+              OutputPath2 = OutputPath.replace('_curated_lig_2_transformed.pdb','') +'_'+ ProteinChainInstance.ChainID+'_'
+
+              TouchingTripletsInstance. OutputToPdbFiles ( OutputPath2 ) # i teraz jaka to bedzie sciezka :)
+
+              NterOrientation_I = ProteinChainInstance.ProteinNterOrientation ( )
+
+              TouchingTripletsInstance.OutputRepresentations ( NterOrientation_I, OutputPath2  )
+
+       return TouchingTripletsInstance
+
+#####################################################################################################################################################
+
+   def ExtractTouchingPairs ( self, OutputPath ): # sciezka zdefiniowana na wejsciu, musi byc jednak oddzielny katalog dla kazdego PDB, i musze lepiej zdiagnozowac co sie tam dzieje ....
+
+       import ProteinChainModule; from ProteinChainModule import ProteinChain;
+       import SetOfN_TMHelicesModule; from SetOfN_TMHelicesModule import *;
+       import SetOf3TMHelicesModule; from SetOf3TMHelicesModule import *;
+       import SetOfTripletsModule; from SetOfTripletsModule import TouchingTriplets;
+
+       ProteinChainInstances = self.ExtractProteinChains ( )
+#       ProteinChainInstances [0].Print ( )
+#       quit ( )
+#       print ProteinChainInstances [ 0 ].Content [ 0 ]. Content [ 0 ]
+#       quit ()
+# a powinno byc z residuow chyba, czy nie :-/ 
+#       TMHelicesInstance = TMHelices ( ProteinChainInstance.TMHelices ( ) )
+#       TMHelicesInstance = TMHelices ( ProteinChainInstance.MRegionResiduesSegments ( ) ) # so switch to residue segments
+       for ProteinChainInstance in ProteinChainInstances:
+
+           TMHelicesInstance = TMHelices ( ProteinChainInstance.TMSegments ( ) ) # so switch to TM segments
+#ok where is this class, actually
+#           TMHelicesInstance.Print ( )
+           if TMHelicesInstance.Content!= []:
+              TouchingPairsInstance = TouchingPairs ( TMHelicesInstance.ExtractTouchingPairs ( ) ) # which gives us a list of lists
+#           ConsecutiveTripletsInstance.Print ( )
+#_curated_lig_2_transformed.pdb
+# one task is to write it down
+# task is to write down the numbers of helices?
+              OutputPath2 = OutputPath.replace('_curated_lig_2_transformed.pdb','') +'_'+ ProteinChainInstance.ChainID+'_'
+
+              TouchingPairsInstance. OutputToPdbFiles ( OutputPath2 ) # i teraz jaka to bedzie sciezka :)
+
+              NterOrientation_I = ProteinChainInstance.ProteinNterOrientation ( )
+
+              TouchingPairsInstance.OutputRepresentations ( NterOrientation_I, OutputPath2  )
+
+       return TouchingPairsInstance
+
+#####################################################################################################################################################
+
+   def ExtractTMSegments ( self, OutputPath ):
+
+       ProteinChainInstances = self. ExtractProteinChains ( ) # moznaby to podzielic na etapy albo i nie
+
+       TMHelixInstances = [ ]
+
+       for ProteinChainInstance in ProteinChainInstances:
+
+           os.system (' mkdir '+ OutputPath[:-5] + ProteinChainInstance. ChainID )
+
+           TMSegments = ProteinChainInstance. TMSegments ( ) #
+           MRegionResiduesSegments_I = ProteinChainInstance. MRegionResiduesSegments ()
+
+           N=0
+
+#
+           os.system (' mkdir '+ OutputPath[:-5] + ProteinChainInstance.ChainID+ '/MM' )
+           for MRegionResiduesSegment_I in MRegionResiduesSegments_I. Content:
+
+               N=N+1
+#               MRegionResiduesSegment_I. Print(); quit ();
+               
+
+               ProteinChain( MRegionResiduesSegment_I. Content). OutputToPdbFile ( OutputPath[:-5] + ProteinChainInstance.ChainID + '/MM/' + OutputPath[-5:]+ ProteinChainInstance.ChainID+'_MM_'+str(N)+'_' )
+
+### teraz takie ktore sa transmembrane ###
+
+           os.system (' mkdir '+ OutputPath[:-5] + ProteinChainInstance.ChainID+ '/CrossingMembrane' ); N=0;
+           for MRegionResiduesSegment_I in MRegionResiduesSegments_I. Content:
+               
+#               MRegionResiduesSegment_I. Print(); quit ();
+               if MSegment (MRegionResiduesSegment_I. Content). CrossingMembrane ():
+                  N=N+1
+                  ProteinChain( MRegionResiduesSegment_I. Content). OutputToPdbFile ( OutputPath[:-5] + ProteinChainInstance.ChainID + '/CrossingMembrane/' + OutputPath[-5:]+ ProteinChainInstance.ChainID+'_CrossingMembrane_'+str(N)+'_' )
+
+           os.system (' mkdir '+ OutputPath[:-5] + ProteinChainInstance.ChainID+ '/TransMembrane' ); N=0;
+           for MRegionResiduesSegment_I in MRegionResiduesSegments_I. Content:
+               
+#               MRegionResiduesSegment_I. Print(); quit ();
+               if MSegment (MRegionResiduesSegment_I. Content). TransMembrane ():
+                  N=N+1
+                  ProteinChain( MRegionResiduesSegment_I. Content). OutputToPdbFile ( OutputPath[:-5] + ProteinChainInstance.ChainID + '/TransMembrane/' + OutputPath[-5:]+ ProteinChainInstance.ChainID+'_MM_'+str(N)+'_' )
+
+           os.system (' mkdir '+ OutputPath[:-5] + ProteinChainInstance.ChainID+ '/Filtered' ); N=0; 
+
+           for MRegionResiduesSegment_I in MRegionResiduesSegments_I. Content:
+               
+#               MRegionResiduesSegment_I. Print(); quit ();
+               if MSegment (MRegionResiduesSegment_I. Content). TransMembrane ():
+
+                  if MSegment (MRegionResiduesSegment_I. Content). Filtered ():
+                     print 'Filtered'; # quit ();
+                     N=N+1
+                     ProteinChain( MRegionResiduesSegment_I. Content). OutputToPdbFile ( OutputPath[:-5] + ProteinChainInstance.ChainID + '/Filtered/' + OutputPath[-5:]+ ProteinChainInstance.ChainID+'_Filtered_'+str(N)+'_' )
+#                  else:   print 'UnFiltered'; quit ();
+         
+           if TMSegments != []: # czyli jesli nie jest soluble
+
+              TMSegmentsI = N_TMs_Set ( TMSegments ) # 
+              
+              if Parametry. PruneBasedOnHalfHelixDiscrepancy:
+                  
+                  HalfHelixTiltConsistentI = []
+
+                  for TmSegmentI in TMSegments:
+                      
+                      if TmSegmentI. HalfHelixTiltConsistent ():
+                          
+                          HalfHelixTiltConsistentI. append (TmSegmentI)
+                          
+                  TMSegmentsI = N_TMs_Set ( HalfHelixTiltConsistentI )
+                  
+                  os.system (' mkdir '+ OutputPath[:-5] + ProteinChainInstance.ChainID+ '/HalfHelixTiltConsistent' )
+              
+              N=0  
+
+              os.system (' mkdir '+ OutputPath[:-5] + ProteinChainInstance.ChainID+ '/TM' ) 
+              for TMHelixInstance in TMSegmentsI.Content:
+
+                  N = N + 1
+#                  TMHelixInstance. Print ()
+                  
+                  TMHelixInstance.OutputToPdbFile ( OutputPath[:-5] + ProteinChainInstance.ChainID + '/TM/' + OutputPath[-5:]+ ProteinChainInstance.ChainID+'_'+str(N)+'_' ) # bez sensu
+              if len(TMSegmentsI.Content) >= 3:
+                 TMSegmentsI. OutputRepresentation ( ProteinNterDescriptor = 'XX',Path= OutputPath[:-5] + ProteinChainInstance.ChainID + '/' + OutputPath[-5:]+ ProteinChainInstance.ChainID+'_' ) # i to jest kluczowe!
+
+           print OutputPath + ProteinChainInstance.ChainID
+
+       return TMHelixInstances
+
+#####################################################################################################################################################
+
+   def ExtractTouchingNSets ( self, OutputPath, Order ):
+
+       import os
+       import N_TMs_Set; from  N_TMs_Set import N_TMs_Set;
+
+       ProteinChainInstances = self.ExtractProteinChains ( )
+
+       TouchingNSetInstances = [ ]
+
+       for ProteinChainInstance in ProteinChainInstances:
+
+           os.system (' mkdir '+ OutputPath[:-5] + ProteinChainInstance.ChainID )
+
+#           print OutputPath[:-5]
+
+           OutputPathSplit = OutputPath. split ('/')
+           Family =  OutputPathSplit [ -3 ]; Code =  OutputPathSplit [ -2 ]; Chain = ProteinChainInstance.ChainID
+
+           RepresentationOutputPath = './DaneWyjsciowe/ExtractedTouchingNSetsRepresentations'+'/'+str(Order)+'/'+Family+'/'+Code+'/'+Chain+'/'+Code+'_'+Chain
+           os.system ( ' mkdir ./DaneWyjsciowe/ExtractedTouchingNSetsRepresentations'+'/'+str(Order)+'/'+Family )
+           os.system ( 'mkdir ./DaneWyjsciowe/ExtractedTouchingNSetsRepresentations'+'/'+str(Order)+'/'+Family+'/'+Code )
+           os.system ( 'mkdir ./DaneWyjsciowe/ExtractedTouchingNSetsRepresentations'+'/'+str(Order)+'/'+Family+'/'+Code+'/'+Chain )
+
+           print 'RepresentationOutputPath'
+           print RepresentationOutputPath
+
+           TMHelicesInstance = N_TMs_Set ( ProteinChainInstance. TMSegments ( ) ) # moze chodzi troche o TMSegments tez, nie wiem, na pewno
+# trzeba to przebudowac
+
+           TouchingNSetsInstance = TMHelicesInstance. ExtractTouchingNSets ( ) # czyli to jest to miejsce
+
+           for TouchingNSetInstance in TouchingNSetsInstance.Content:
+
+               TouchingNSetInstance.OutputToPdbFile ( OutputPath[:-5] + ProteinChainInstance.ChainID + '/' + OutputPath[-5:]+ ProteinChainInstance.ChainID+'_' )
+               TouchingNSetInstance.OutputRepresentation ( ProteinNterDescriptor = 'XX',Path = RepresentationOutputPath ) # tu tez moze byc blad
+
+               TouchingNSetInstances. append ( TouchingNSetInstance )
+
+       return TouchingNSetInstances
+       
+#####################################################################################################################################################
+
+
